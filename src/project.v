@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2024 Your Name
+ * Copyright (c) 2024 Eva Siao
  * SPDX-License-Identifier: Apache-2.0
  */
 
@@ -16,12 +16,33 @@ module tt_um_example (
     input  wire       rst_n     // reset_n - low to reset
 );
 
-  // All output pins must be assigned. If not used, assign to 0.
-  assign uo_out  = ui_in + uio_in;  // Example: ou_out is the sum of ui_in and uio_in
-  assign uio_out = 0;
-  assign uio_oe  = 0;
+  // control inputs
+  wire en       = ui_in[0];
+  wire load     = ui_in[1];
+  wire up_down  = ui_in[2];
+  wire oe       = ui_in[3];
+
+  // counter value (never Z inside the core)
+  wire [7:0] count;
+
+  programmable_counter counter_inst (
+      .clk      (clk),
+      .rst_n    (rst_n),
+      .en       (en),
+      .load     (load),
+      .up_down  (up_down),
+      .data_in  (uio_in),   // parallel load comes in on the bidirectional bus
+      .oe       (1'b1),     // always enable output since tinytapeout can't do tri-state internally. instead use uio_oe to do tri-state output
+      .data_out (count)
+  );
+
+  assign uo_out   = count;
+
+  // bidirectional bus: drives the count when oe=1, otherwise acts as the load input (tri-state output)
+  assign uio_out  = count;
+  assign uio_oe   = {8{oe}};
 
   // List all unused inputs to prevent warnings
-  wire _unused = &{ena, clk, rst_n, 1'b0};
+  wire _unused = &{ena, ui_in[7:4], 1'b0};
 
 endmodule
